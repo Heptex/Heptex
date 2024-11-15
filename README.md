@@ -1,7 +1,7 @@
 - 👋 Hi, I’m Heptex [Heptex](https://github.com/Heptex)
 - 👀 I’m interested in AOSP Development 
 - 🌱 I’m currently learning nothing ( cuz i have to give boards 2025 )
-- 📫 How to reach me [Telegram](t.me/@heptexx) [X](https://twitter.com/SacredSamurai9)
+- 📫 How to reach me [Telegram](https://t.me/heptexx) | [X](https://twitter.com/SacredSamurai9)
 - 😄 Pronouns: he/him
 
 <!---
