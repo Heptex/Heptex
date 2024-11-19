@@ -7,10 +7,6 @@ on:
         description: "Device tree link"
         required: true
         default: ""
-      rom_repo:
-        description: "ROM repository link (with manifest)"
-        required: true
-        default: ""
       device_codename:
         description: "Device codename (e.g., 'vitamin')"
         required: true
@@ -54,14 +50,12 @@ jobs:
           chmod a+x /usr/local/bin/repo
           repo --version  # Check the version to ensure it's updated
 
-      # Step 4: Clone the LineageOS manifest (without vitamin lineage)
-      - name: Initialize LineageOS repository
+      # Step 4: Clone the LineageOS manifest and sync with lineage-21.0 branch
+      - name: Initialize and sync LineageOS repository
         run: |
           mkdir -p $HOME/lineageos
           cd $HOME/lineageos
-          git clone "${{ github.event.inputs.rom_repo }}" rom-source  # Clone the manifest repository
-          cd rom-source
-          repo init -u . -b lineage-21.0  # Sync the correct branch: lineage-21.0
+          repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --git-lfs  # Initialize with the correct manifest repo
           repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc)  # Sync the repositories
         shell: bash
 
