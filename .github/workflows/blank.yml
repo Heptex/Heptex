@@ -24,9 +24,8 @@ jobs:
           sudo apt-get install -y openjdk-11-jdk git-core gnupg flex bison gperf build-essential zip curl zlib1g-dev \
                                   gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev \
                                   libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig \
-                                  repo python3 python3-pip
-          pip3 install --user -U ccache
-          echo 'export PATH=$PATH:~/.local/bin' >> ~/.bashrc
+                                  repo python3 python3-pip ccache
+          echo 'export PATH=$PATH:/usr/lib/ccache' >> ~/.bashrc
           source ~/.bashrc
           echo "Installed prerequisites"
 
@@ -62,4 +61,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: crom-build
-          path: $HOME/crom/rom-source/out/target/product/*
+          path: $HOME/crom/rom-source/out/target/product/*name: Build CROM
