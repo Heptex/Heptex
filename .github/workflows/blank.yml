@@ -47,7 +47,14 @@ jobs:
           source ~/.bashrc
           ccache --version
 
-      # Step 3: Initialize the ROM repository and sync
+      # Step 3: Update repo tool to latest version
+      - name: Update repo tool
+        run: |
+          curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo
+          chmod a+x /usr/local/bin/repo
+          repo --version  # Check the version to ensure it's updated
+
+      # Step 4: Initialize the ROM repository and sync
       - name: Initialize Vitamin LineageOS repository
         run: |
           mkdir -p $HOME/vitamin_lineage
@@ -58,14 +65,14 @@ jobs:
           repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc)
         shell: bash
 
-      # Step 4: Clone the device tree
+      # Step 5: Clone the device tree
       - name: Clone device tree
         run: |
           cd $HOME/vitamin_lineage/rom-source
           git clone "${{ github.event.inputs.device_tree }}" device-tree
         shell: bash
 
-      # Step 5: Build the ROM with mka bacon
+      # Step 6: Build the ROM with mka bacon
       - name: Build Vitamin LineageOS with mka bacon
         run: |
           cd $HOME/vitamin_lineage/rom-source
@@ -74,7 +81,7 @@ jobs:
           mka bacon -j$(nproc)  # Using all available CPU cores for parallelization
         shell: bash
 
-      # Step 6: Upload the build artifacts
+      # Step 7: Upload the build artifacts
       - name: Upload ROM
         uses: actions/upload-artifact@v3
         with:
