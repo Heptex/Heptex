@@ -1,4 +1,4 @@
-name: Build CROM
+name: Build Vitamin LineageOS
 
 on:
   workflow_dispatch:
@@ -11,6 +11,10 @@ on:
         description: "ROM repository link (with manifest)"
         required: true
         default: ""
+      device_codename:
+        description: "Device codename (e.g., 'vitamin')"
+        required: true
+        default: "vitamin"
 
 jobs:
   build:
@@ -24,41 +28,55 @@ jobs:
           sudo apt-get install -y openjdk-11-jdk git-core gnupg flex bison gperf build-essential zip curl zlib1g-dev \
                                   gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev \
                                   libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig \
-                                  repo python3 python3-pip ccache
-          echo 'export PATH=$PATH:/usr/lib/ccache' >> ~/.bashrc
-          source ~/.bashrc
-          echo "Installed prerequisites"
+                                  repo python3 python3-pip cmake
+          echo "Installed basic prerequisites"
 
-      # Step 2: Initialize the ROM repository and sync
-      - name: Initialize ROM repository
+      # Step 2: Install ccache from source
+      - name: Install ccache from source
         run: |
-          mkdir -p $HOME/crom
-          cd $HOME/crom
+          cd /tmp
+          wget https://github.com/ccache/ccache/releases/download/v4.8.2/ccache-4.8.2.tar.gz
+          tar -xvf ccache-4.8.2.tar.gz
+          cd ccache-4.8.2
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+          sudo make install
+          echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
+          source ~/.bashrc
+          ccache --version
+
+      # Step 3: Initialize the ROM repository and sync
+      - name: Initialize Vitamin LineageOS repository
+        run: |
+          mkdir -p $HOME/vitamin_lineage
+          cd $HOME/vitamin_lineage
           git clone "${{ github.event.inputs.rom_repo }}" rom-source
           cd rom-source
-          repo init -u . -b main
+          repo init -u . -b lineage-20.0
           repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc)
         shell: bash
 
-      # Step 3: Clone the device tree
+      # Step 4: Clone the device tree
       - name: Clone device tree
         run: |
-          cd $HOME/crom/rom-source
+          cd $HOME/vitamin_lineage/rom-source
           git clone "${{ github.event.inputs.device_tree }}" device-tree
         shell: bash
 
-      # Step 4: Build the ROM
-      - name: Build CROM
+      # Step 5: Build the ROM with mka bacon
+      - name: Build Vitamin LineageOS with mka bacon
         run: |
-          cd $HOME/crom/rom-source
+          cd $HOME/vitamin_lineage/rom-source
           source build/envsetup.sh
-          lunch crom_device-userdebug
-          make bacon -j$(nproc)
+          lunch vitamin_${{ github.event.inputs.device_codename }}-lineage-ap2a-user
+          mka bacon -j$(nproc)  # Using all available CPU cores for parallelization
         shell: bash
 
-      # Step 5: Upload the build artifacts
+      # Step 6: Upload the build artifacts
       - name: Upload ROM
         uses: actions/upload-artifact@v3
         with:
-          name: crom-build
-          path: $HOME/crom/rom-source/out/target/product/*
+          name: vitamin-lineageos-build
+          path: $HOME/vitamin_lineage/rom-source/out/target/product/*
