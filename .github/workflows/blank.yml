@@ -54,28 +54,28 @@ jobs:
           chmod a+x /usr/local/bin/repo
           repo --version  # Check the version to ensure it's updated
 
-      # Step 4: Initialize the ROM repository and sync
-      - name: Initialize Vitamin LineageOS repository
+      # Step 4: Clone the LineageOS manifest (without vitamin lineage)
+      - name: Initialize LineageOS repository
         run: |
-          mkdir -p $HOME/vitamin_lineage
-          cd $HOME/vitamin_lineage
-          git clone "${{ github.event.inputs.rom_repo }}" rom-source
+          mkdir -p $HOME/lineageos
+          cd $HOME/lineageos
+          git clone "${{ github.event.inputs.rom_repo }}" rom-source  # Clone the manifest repository
           cd rom-source
-          repo init -u . -b lineage-20.0
-          repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc)
+          repo init -u . -b lineage-20.0  # Ensure the correct branch is used
+          repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc)  # Sync the repositories
         shell: bash
 
       # Step 5: Clone the device tree
       - name: Clone device tree
         run: |
-          cd $HOME/vitamin_lineage/rom-source
+          cd $HOME/lineageos/rom-source
           git clone "${{ github.event.inputs.device_tree }}" device-tree
         shell: bash
 
       # Step 6: Build the ROM with mka bacon
       - name: Build Vitamin LineageOS with mka bacon
         run: |
-          cd $HOME/vitamin_lineage/rom-source
+          cd $HOME/lineageos/rom-source
           source build/envsetup.sh
           lunch vitamin_${{ github.event.inputs.device_codename }}-lineage-ap2a-user
           mka bacon -j$(nproc)  # Using all available CPU cores for parallelization
@@ -86,4 +86,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: vitamin-lineageos-build
-          path: $HOME/vitamin_lineage/rom-source/out/target/product/*
+          path: $HOME/lineageos/rom-source/out/target/product/*
