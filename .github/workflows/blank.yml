@@ -61,7 +61,7 @@ jobs:
           cd $HOME/lineageos
           git clone "${{ github.event.inputs.rom_repo }}" rom-source  # Clone the manifest repository
           cd rom-source
-          repo init -u . -b lineage-20.0  # Ensure the correct branch is used
+          repo init -u . -b lineage-21.0  # Sync the correct branch: lineage-21.0
           repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc)  # Sync the repositories
         shell: bash
 
