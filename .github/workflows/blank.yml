@@ -51,12 +51,16 @@ jobs:
           repo --version  # Check the version to ensure it's updated
 
       # Step 4: Clone the LineageOS manifest and sync with lineage-21.0 branch
-      - name: Initialize and sync LineageOS repository
+      - name: Initialize LineageOS repository
         run: |
           mkdir -p $HOME/lineageos
           cd $HOME/lineageos
+          echo "Initializing repo..."
           repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --git-lfs  # Initialize with the correct manifest repo
-          repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc)  # Sync the repositories
+          echo "Repo initialized successfully."
+          
+          echo "Starting repo sync..."
+          repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc) -v  # Sync with verbose output to debug
         shell: bash
 
       # Step 5: Clone the device tree
