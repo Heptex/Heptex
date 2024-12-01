@@ -1,87 +1,75 @@
-name: Build Vitamin LineageOS
+name: Extract and Upload Firmware Blobs
 
 on:
-  workflow_dispatch:
-    inputs:
-      device_tree:
-        description: "Device tree link"
-        required: true
-        default: ""
-      device_codename:
-        description: "Device codename (e.g., 'vitamin')"
-        required: true
-        default: "vitamin"
+  workflow_dispatch: # Allows manual triggering of the workflow
+  push:
+    branches:
+      - main # Replace with your target branch
 
 jobs:
-  build:
+  extract-and-upload:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Install prerequisites
-      - name: Install prerequisites
+      # Step 1: Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 2: Install required tools
+      - name: Install Required Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-11-jdk git-core gnupg flex bison gperf build-essential zip curl zlib1g-dev \
-                                  gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev \
-                                  libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig \
-                                  repo python3 python3-pip cmake
-          echo "Installed basic prerequisites"
+          sudo apt-get install -y unzip simg2img mount tar curl jq
 
-      # Step 2: Install ccache from source
-      - name: Install ccache from source
+      # Step 3: Unzip the firmware file
+      - name: Unzip Firmware
         run: |
-          cd /tmp
-          wget https://github.com/ccache/ccache/releases/download/v4.8.2/ccache-4.8.2.tar.gz
-          tar -xvf ccache-4.8.2.tar.gz
-          cd ccache-4.8.2
-          mkdir build
-          cd build
-          cmake ..
-          make -j$(nproc)
-          sudo make install
-          echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
-          source ~/.bashrc
-          ccache --version
+          mkdir -p firmware
+          unzip firmware.zip -d firmware
 
-      # Step 3: Update repo tool to latest version
-      - name: Update repo tool
+      # Step 4: Process partition images
+      - name: Extract Blobs from Partition Images
         run: |
-          curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/local/bin/repo
-          chmod a+x /usr/local/bin/repo
-          repo --version  # Check the version to ensure it's updated
-
-      # Step 4: Clone the LineageOS manifest and sync with lineage-21.0 branch
-      - name: Initialize LineageOS repository
-        run: |
-          mkdir -p $HOME/lineageos
-          cd $HOME/lineageos
-          echo "Initializing repo..."
-          repo init -u https://github.com/LineageOS/android.git -b lineage-21.0 --git-lfs  # Initialize with the correct manifest repo
-          echo "Repo initialized successfully."
+          mkdir -p mount_points blobs
           
-          echo "Starting repo sync..."
-          repo sync --force-sync --no-clone-bundle --current-branch --jobs=$(nproc) -v  # Sync with verbose output to debug
-        shell: bash
+          # List all images in the firmware directory
+          for img in firmware/*.img; do
+            echo "Processing $img"
+            
+            # Convert sparse images to raw if needed
+            if file "$img" | grep -q "sparse"; then
+              raw_img="mount_points/$(basename "$img" .img).raw"
+              simg2img "$img" "$raw_img"
+            else
+              raw_img="$img"
+            fi
 
-      # Step 5: Clone the device tree
-      - name: Clone device tree
+            # Mount the raw image
+            mkdir -p mount_points/$(basename "$raw_img" .img)
+            sudo mount -o loop "$raw_img" mount_points/$(basename "$raw_img" .img)
+
+            # Copy blobs
+            cp -r mount_points/$(basename "$raw_img" .img)/path_to_blobs/* blobs/ || true
+            
+            # Unmount and clean up
+            sudo umount mount_points/$(basename "$raw_img" .img)
+            rm -rf mount_points/$(basename "$raw_img" .img)
+          done
+
+      # Step 5: Archive the extracted blobs
+      - name: Archive Extracted Blobs
         run: |
-          cd $HOME/lineageos/rom-source
-          git clone "${{ github.event.inputs.device_tree }}" device-tree
-        shell: bash
+          tar -czvf blobs.tar.gz blobs
 
-      # Step 6: Build the ROM with mka bacon
-      - name: Build Vitamin LineageOS with mka bacon
+      # Step 6: Upload to GoFile
+      - name: Upload to GoFile
         run: |
-          cd $HOME/lineageos/rom-source
-          source build/envsetup.sh
-          lunch vitamin_${{ github.event.inputs.device_codename }}-lineage-ap2a-user
-          mka bacon -j$(nproc)  # Using all available CPU cores for parallelization
-        shell: bash
+          API_KEY="c2893086-ada6-4062-a3f6-ed5ab1d8de8e"
+          response=$(curl -s -X POST "https://api.gofile.io/getServer")
+          server=$(echo "$response" | jq -r '.data.server')
 
-      # Step 7: Upload the build artifacts
-      - name: Upload ROM
-        uses: actions/upload-artifact@v3
-        with:
-          name: vitamin-lineageos-build
-          path: $HOME/lineageos/rom-source/out/target/product/*
+          upload_response=$(curl -s -X POST "https://$server.gofile.io/uploadFile" \
+            -F "file=@blobs.tar.gz" \
+            -F "token=$API_KEY")
+
+          echo "Upload Response: $upload_response"
