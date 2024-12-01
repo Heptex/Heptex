@@ -92,12 +92,7 @@ jobs:
       # Step 7: Upload to GoFile
       - name: Upload to GoFile
         run: |
-          # Check if file argument is provided
-          if [[ "$#" == '0' ]]; then
-              echo -e 'ERROR: No File Specified!' && exit 1
-          fi
-
-          # Store the file path, preserving spaces
+          # Store the file path directly
           FILE="blobs.tar.gz"
 
           # Query GoFile API to find the best server for upload
@@ -110,4 +105,4 @@ jobs:
           echo "$LINK"
 
           # Print a blank line for better readability
-          echoq
+          echo
