@@ -1,19 +1,23 @@
 name: Extract and Upload Firmware Blobs
 
 on:
-  workflow_dispatch: # Allows manual triggering of the workflow
-  push:
-    branches:
-      - main # Replace with your target branch
+  workflow_dispatch:
+    inputs:
+      firmware_zip_url:
+        description: "Firmware ZIP download link"
+        required: true
+        default: "https://example.com/firmware.zip" # Provide a default link for convenience
 
 jobs:
   extract-and-upload:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      # Step 1: Download the firmware ZIP
+      - name: Download Firmware ZIP
+        run: |
+          mkdir -p firmware
+          curl -L "${{ github.event.inputs.firmware_zip_url }}" -o firmware/firmware.zip
 
       # Step 2: Install required tools
       - name: Install Required Tools
@@ -24,8 +28,7 @@ jobs:
       # Step 3: Unzip the firmware file
       - name: Unzip Firmware
         run: |
-          mkdir -p firmware
-          unzip firmware.zip -d firmware
+          unzip firmware/firmware.zip -d firmware
 
       # Step 4: Process partition images
       - name: Extract Blobs from Partition Images
