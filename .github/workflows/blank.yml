@@ -45,7 +45,7 @@ jobs:
           mkdir -p mount_points blobs
           
           # Define partitions of interest
-          partitions="vendor odm product modem system dtbo "
+          partitions="vendor firmware odm product modem system"
 
           # Process each partition
           for part in $partitions; do
@@ -90,33 +90,24 @@ jobs:
           tar -czvf blobs.tar.gz blobs
 
       # Step 7: Upload to GoFile
-      - - name: Upload to GoFile
-  run: |
-    API_KEY="c2893086-ada6-4062-a3f6-ed5ab1d8de8e"
+      - name: Upload to GoFile
+        run: |
+          # Check if file argument is provided
+          if [[ "$#" == '0' ]]; then
+              echo -e 'ERROR: No File Specified!' && exit 1
+          fi
 
-    # Step 1: Get the upload server from GoFile
-    response=$(curl -s -X POST "https://api.gofile.io/getServer")
-    server=$(echo "$response" | jq -r '.data.server')
+          # Store the file path, preserving spaces
+          FILE="blobs.tar.gz"
 
-    if [ -z "$server" ] || [ "$server" == "null" ]; then
-      echo "Error: Failed to fetch GoFile server. Response: $response"
-      exit 1
-    fi
+          # Query GoFile API to find the best server for upload
+          SERVER=$(curl -s https://api.gofile.io/servers | jq -r '.data.servers[0].name')
 
-    echo "Using server: $server"
+          # Upload the file to GoFile
+          LINK=$(curl -# -F "file=@$FILE" "https://${SERVER}.gofile.io/uploadFile" | jq -r '.data|.downloadPage') 2>&1
 
-    # Step 2: Upload the file to the obtained server
-    upload_response=$(curl -s -X POST "https://$server.gofile.io/uploadFile" \
-      -F "file=@blobs.tar.gz" \
-      -F "token=$API_KEY")
+          # Display the download link
+          echo "$LINK"
 
-    # Step 3: Parse the upload response to extract the download link
-    download_link=$(echo "$upload_response" | jq -r '.data.downloadPage')
-
-    if [ -z "$download_link" ] || [ "$download_link" == "null" ]; then
-      echo "Error: File upload failed. Response: $upload_response"
-      exit 1
-    fi
-
-    echo "File successfully uploaded to GoFile."
-    echo "Download Link: $download_link"
+          # Print a blank line for better readability
+          echoq
