@@ -3,34 +3,43 @@ name: Extract and Upload Firmware Blobs
 on:
   workflow_dispatch:
     inputs:
-      firmware_zip_url:
-        description: "Firmware ZIP download link"
+      firmware_drive_link:
+        description: "Google Drive link to firmware ZIP"
         required: true
-        default: "https://example.com/firmware.zip" # Provide a default link for convenience
+        default: "https://drive.google.com/file/d/<file-id>/view?usp=sharing"
 
 jobs:
   extract-and-upload:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Download the firmware ZIP
-      - name: Download Firmware ZIP
+      # Step 1: Install gdown for Google Drive downloads
+      - name: Install gdown
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip
+          pip install gdown
+
+      # Step 2: Download firmware from Google Drive
+      - name: Download Firmware ZIP from Google Drive
         run: |
           mkdir -p firmware
-          curl -L "${{ github.event.inputs.firmware_zip_url }}" -o firmware/firmware.zip
+          # Extract file ID from Google Drive link
+          file_id=$(echo "${{ github.event.inputs.firmware_drive_link }}" | grep -o 'd/[^/]*' | cut -d'/' -f2)
+          gdown "https://drive.google.com/uc?id=$file_id" -O firmware/firmware.zip
 
-      # Step 2: Install required tools
+      # Step 3: Install required tools
       - name: Install Required Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y unzip simg2img mount tar curl jq
 
-      # Step 3: Unzip the firmware file
+      # Step 4: Unzip the firmware file
       - name: Unzip Firmware
         run: |
           unzip firmware/firmware.zip -d firmware
 
-      # Step 4: Process partition images
+      # Step 5: Process partition images
       - name: Extract Blobs from Partition Images
         run: |
           mkdir -p mount_points blobs
@@ -59,12 +68,12 @@ jobs:
             rm -rf mount_points/$(basename "$raw_img" .img)
           done
 
-      # Step 5: Archive the extracted blobs
+      # Step 6: Archive the extracted blobs
       - name: Archive Extracted Blobs
         run: |
           tar -czvf blobs.tar.gz blobs
 
-      # Step 6: Upload to GoFile
+      # Step 7: Upload to GoFile
       - name: Upload to GoFile
         run: |
           API_KEY="c2893086-ada6-4062-a3f6-ed5ab1d8de8e"
