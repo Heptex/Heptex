@@ -1,0 +1,34 @@
+name: Download and Upload to Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: "URL of the file to download"
+        required: true
+        type: string
+
+jobs:
+  download-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Download the file from the provided URL
+      - name: Download file
+        run: |
+          echo "Downloading file from: ${{ inputs.file_url }}"
+          curl -L -o downloaded_file.zip "${{ inputs.file_url }}"
+
+      # Step 3: Create a Release (if not already created) and upload the file
+      - name: Upload to GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name || 'manual-release' }}
+          name: Release ${{ github.ref_name || 'Manual Release' }}
+          artifacts: downloaded_file.zip
+          artifactContentType: application/zip
