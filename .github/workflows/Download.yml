@@ -1,10 +1,10 @@
-name: Download from PixelDrain and Upload to Release
+name: Download and Upload to Release
 
 on:
   workflow_dispatch:
     inputs:
-      pixeldrain_url:
-        description: "PixelDrain URL of the file to download"
+      file_url:
+        description: "URL of the file to download"
         required: true
         type: string
 
@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Download the file from PixelDrain
-      - name: Download file from PixelDrain
+      # Step 1: Download the file from the provided URL
+      - name: Download File
         run: |
-          echo "Downloading file from: ${{ inputs.pixeldrain_url }}"
-          curl -L -o downloaded_file "${{ inputs.pixeldrain_url }}"
+          echo "Downloading file from: ${{ inputs.file_url }}"
+          curl -L -o downloaded_file "${{ inputs.file_url }}"
 
       # Step 2: Compress the file (optional)
       - name: Compress Downloaded File
@@ -25,7 +25,7 @@ jobs:
           echo "Compressing the downloaded file..."
           zip -r downloaded_file.zip downloaded_file
 
-      # Step 3: Create a Release and Upload the File
+      # Step 3: Upload to GitHub Release
       - name: Upload to GitHub Release
         uses: ncipollo/release-action@v1
         with:
